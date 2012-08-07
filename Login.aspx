@@ -8,7 +8,7 @@
         </tr>
         <tr>
             <td align="right">Password:</td>
-            <td><asp:TextBox runat="server" ID="inputPassword"></asp:TextBox></td>
+            <td><asp:TextBox runat="server" ID="inputPassword" TextMode="Password"></asp:TextBox></td>
         </tr>
     </table>
     <asp:Button runat="server" OnClick="cmdLogin_Click" Text="Login"/>
