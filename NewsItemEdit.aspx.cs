@@ -5,7 +5,6 @@ using System.Web.UI.WebControls;
 public partial class ArticleEdit : System.Web.UI.Page
 {
     private const string ReleaseDateFormat = "yyyy-MM-dd";
-    private const string NewArticlePath = "~/new-news";
 
     protected void Page_Load(object sender, EventArgs e)
     {
@@ -15,8 +14,7 @@ public partial class ArticleEdit : System.Web.UI.Page
             if (null != source)
             {
                 this.Source = source;
-                var repository = new NewsRepository(NewArticlePath);
-                var article = repository.GetItemById(source);
+                var article = AppState.PendingNews.GetItemById(source);
                 this.inputTitle.Text = article.Title;
                 this.inputContent.Text = article.Content;
                 this.inputReleaseDate.Text = article.ReleaseDate.ToString(ReleaseDateFormat);
@@ -28,8 +26,7 @@ public partial class ArticleEdit : System.Web.UI.Page
     {
         if (Page.IsValid)
         {
-            var repository = new NewsRepository(NewArticlePath);
-            repository.SaveItem(new NewsItem
+            AppState.PendingNews.SaveItem(new NewsItem
                 {
                     Source = Source,
                     Title = this.inputTitle.Text,

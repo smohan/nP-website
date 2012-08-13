@@ -57,7 +57,17 @@ public class NewsRepository
 
     public void DeleteItem(string id)
     {
+        var index = GetItemIndexFromId(id);
         File.Delete(GetFileNameFromId(id));
+        while(File.Exists(GetFileNameFromIndex(++index)))
+        {
+            File.Move(GetFileNameFromIndex(index), GetFileNameFromIndex(index - 1));
+        }
+    }
+
+    private string GetFileNameFromIndex(int index)
+    {
+        return GetFileNameFromId(GetItemIdFromIndex(index));
     }
 
     public void MoveLater(string id)
@@ -121,18 +131,23 @@ public class NewsRepository
         return Path.GetFileNameWithoutExtension(fileName);
     }
 
-    public void CopyTo(string newVirtualPath)
+    public void CopyTo(NewsRepository targetRepository)
+    {
+        var targetNewsDirectory = targetRepository._newsDirectory;
+        CopyTo(targetNewsDirectory);
+    }
+
+    private void CopyTo(DirectoryInfo targetNewsDirectory)
     {
         var tempDirectoryPath = Path.GetTempFileName();
         File.Delete(tempDirectoryPath);
         var tempDirectory = new DirectoryInfo(tempDirectoryPath);
         tempDirectory.Create();
-        foreach(var file in GetNewsFiles())
+        foreach (var file in GetNewsFiles())
         {
             file.CopyTo(Path.Combine(tempDirectoryPath, file.Name));
         }
-        var newPhysicalPath = GetPhysicalFromVirtualPath(newVirtualPath);
-        Directory.Delete(newPhysicalPath, true);
-        Directory.Move(tempDirectoryPath, newPhysicalPath);
+        targetNewsDirectory.Delete(true);
+        tempDirectory.MoveTo(targetNewsDirectory.FullName);
     }
 }

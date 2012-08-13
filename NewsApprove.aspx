@@ -8,7 +8,7 @@
     </style>
 </asp:Content>
 <asp:Content runat="server" ContentPlaceHolderID="content">
-    <h1>nP.News</h1>
+    <h1>nP.News - Approve</h1>
     <asp:Repeater ID="dataArticles" runat="server">
         <HeaderTemplate>
             <table style="padding: 30px">
