@@ -23,9 +23,9 @@
         <ItemTemplate>
             <tr>
                 <td valign="top">
-                    <asp:HyperLink runat="server" ImageUrl="images/edit.png" NavigateUrl='<%# "NewsItemEdit.aspx?Source=" + Eval("Source") %>' />
+                    <asp:HyperLink runat="server" ImageUrl="images/edit.png" NavigateUrl='<%# "NewsItemEdit.aspx?Id=" + Eval("Id") %>' />
                     <asp:ImageButton runat="server" ImageUrl="images/delete.png" Width="16" Height="16"
-                        OnCommand="cmdDelete_Click" CommandArgument='<%# Eval("Source") %>' />
+                        OnCommand="cmdDelete_Click" CommandArgument='<%# Eval("Id") %>' />
                 </td>
                 <td>
                     <div>
@@ -39,7 +39,7 @@
                         </h5>
                     </div>
                     <asp:ImageButton runat="server" ImageUrl="images/switch.png" OnCommand="cmdSwitch_Click"
-                        CommandArgument='<%# Eval("Source") %>' />
+                        CommandArgument='<%# Eval("Id") %>' />
                 </td>
             </tr>
         </ItemTemplate>

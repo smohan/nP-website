@@ -16,7 +16,13 @@
                 <tr>
                 <td>
                     <div>
+                        <% if(!IsSingleItem) { %>
+                        <a href='News.aspx?id=<%# Eval("Id") %>'>
+                        <% } %>
                         <h2 style="font-size:14px"><%# Eval("Title") %></h2>
+                        <% if(!IsSingleItem) { %>
+                        </a>
+                        <% } %>
                         <h4 style="color:Gray; font-size:10px;"><%# Eval("ReleaseDate", "{0:MMMM d, yyyy}") %></h4>
                     </div>
                     <div>
@@ -31,4 +37,10 @@
                 </table>
             </FooterTemplate>
         </asp:Repeater>
+    <% if(SingleItemNotFound) { %>
+        <h2 style="font-size:14px">Requested news item not found</h2>
+    <% } %>
+    <% if(IsSingleItem) { %>
+        <p><a href="News.aspx">Back to all news</a></p>
+    <% } %>
 </asp:Content>

@@ -10,11 +10,11 @@ public partial class ArticleEdit : System.Web.UI.Page
     {
         if (!this.IsPostBack)
         {
-            var source = Request.Params["Source"];
-            if (null != source)
+            var id = Request.Params["Id"];
+            if (null != id)
             {
-                this.Source = source;
-                var article = AppState.PendingNews.GetItemById(source);
+                var article = AppState.PendingNews.GetItemById(id);
+                this.Id = id;
                 this.inputTitle.Text = article.Title;
                 this.inputContent.Text = article.Content;
                 this.inputReleaseDate.Text = article.ReleaseDate.ToString(ReleaseDateFormat);
@@ -28,7 +28,7 @@ public partial class ArticleEdit : System.Web.UI.Page
         {
             AppState.PendingNews.SaveItem(new NewsItem
                 {
-                    Source = Source,
+                    Id = Id,
                     Title = this.inputTitle.Text,
                     ReleaseDate = ParseReleaseDate().Value,
                     Content = this.inputContent.Text
@@ -37,10 +37,10 @@ public partial class ArticleEdit : System.Web.UI.Page
         }
     }
 
-    private string Source
+    private string Id
     {
-        get { return (string)ViewState["Source"]; }
-        set { ViewState["Source"] = value; }
+        get { return (string)ViewState["Id"]; }
+        set { ViewState["Id"] = value; }
     }
 
     protected void validatorReleaseDate_Validate(object source, ServerValidateEventArgs args)

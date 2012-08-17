@@ -3,17 +3,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Web;
 
 public class NewsRepository
 {
-    private const int NewsCountMagnitude = 2;
     private readonly DirectoryInfo _newsDirectory;
-    private static readonly string NewsItemIndexPattern = @"(?<Index>" + string.Concat(Enumerable.Repeat(@"\d", NewsCountMagnitude).ToArray()) + ")";
-    private static readonly string NewsItemNamePattern = @"news" + NewsItemIndexPattern;
-    private static readonly Regex NewsItemNameExpression = new Regex(NewsItemNamePattern);
-    private static readonly string NewsItemIndexFormat = new string('0', NewsCountMagnitude);
     private const string NewsItemExtension = "txt";
     private const string ReleaseDateFormat = "yyyy-MM-dd";
 
@@ -29,106 +23,120 @@ public class NewsRepository
 
     public IList<NewsItem> GetAllItems()
     {
-        return (from file in GetNewsFiles()
-                select GetItemByFileName(file.FullName)).ToList();
+        return (from file in GetNewsFileNames()
+                select GetItemByFileName(file)).ToList();
     }
 
     public NewsItem GetItemById(string id)
     {
         var fileName = GetFileNameFromId(id);
-        return GetItemByFileName(fileName);
-    }
-
-    private string GetFileNameFromId(string id)
-    {
-        var fileName = Path.ChangeExtension(Path.Combine(_newsDirectory.FullName, id), NewsItemExtension);
-        return fileName;
+        return null == fileName ? null : GetItemByFileName(fileName);
     }
 
     public void SaveItem(NewsItem item)
     {
-        if(string.IsNullOrEmpty(item.Source))
-        {
-            item.Source = GetNextItemId();
-        }
+        var fileName = string.IsNullOrEmpty(item.Id)
+                           ? new NewsItemFileName(GetNewItemId(), GetNextItemIndex())
+                           : GetFileNameFromId(item.Id);
+
         var releaseDateString = item.ReleaseDate.ToString(ReleaseDateFormat, CultureInfo.InvariantCulture);
-        File.WriteAllLines(GetFileNameFromId(item.Source), new []{item.Title, releaseDateString, item.Content});
+        File.WriteAllLines(GetFullFileName(fileName), new[] {item.Title, releaseDateString, item.Content});
+    }
+
+    private string GetFullFileName(NewsItemFileName fileName)
+    {
+        return Path.Combine(_newsDirectory.FullName, Path.ChangeExtension(fileName.FileName, NewsItemExtension));
+    }
+
+    private static string GetNewItemId()
+    {
+        return Convert.ToBase64String(Guid.NewGuid().ToByteArray())
+            .Replace("/", "_")
+            .Replace("+", "-")
+            .Substring(0, 22);
     }
 
     public void DeleteItem(string id)
     {
-        var index = GetItemIndexFromId(id);
-        File.Delete(GetFileNameFromId(id));
-        while(File.Exists(GetFileNameFromIndex(++index)))
+        var fileName = GetFileNameFromId(id);
+        GetFileInfo(fileName).Delete();
+        var index = fileName.Index;
+        while(ItemAtIndexExists(++index))
         {
-            File.Move(GetFileNameFromIndex(index), GetFileNameFromIndex(index - 1));
+            GetFileInfo(GetFileNameFromIndex(index)).MoveTo(GetFullFileName(GetFileNameFromIndex(index - 1)));
         }
     }
 
-    private string GetFileNameFromIndex(int index)
+    private FileInfo GetFileInfo(NewsItemFileName fileName)
     {
-        return GetFileNameFromId(GetItemIdFromIndex(index));
+        return new FileInfo(GetFullFileName(fileName));
+    }
+
+    private bool ItemAtIndexExists(int index)
+    {
+        return GetNewsFileNames().Any(fn => fn.Index == index);
+    }
+
+    private NewsItemFileName GetFileNameFromIndex(int index)
+    {
+        return GetNewsFileNames().SingleOrDefault(fn => fn.Index == index);
+    }
+
+    private NewsItemFileName GetFileNameFromId(string id)
+    {
+        return GetNewsFileNames().SingleOrDefault(fn => fn.Id == id);
     }
 
     public void MoveLater(string id)
     {
-        var itemIndex = GetItemIndexFromId(id);
-        var newItemIndex = itemIndex - 1;
-        var newId = GetItemIdFromIndex(newItemIndex);
-        var oldFileName = GetFileNameFromId(id);
-        var newFileName = GetFileNameFromId(newId);
+        var oldItemOldName = GetFileNameFromId(id);
+        var oldItemIndex = oldItemOldName.Index;
+        var newItemIndex = oldItemIndex - 1;
+        var oldItemNewName = new NewsItemFileName(id, newItemIndex);
+        var newItemOldName = GetFileNameFromIndex(newItemIndex);
+        var newItemNewName = new NewsItemFileName(newItemOldName.Id, oldItemIndex);
         var tempFileName = Path.GetTempFileName();
-        File.Delete(tempFileName);
-        File.Move(newFileName, tempFileName);
-        File.Move(oldFileName, newFileName);
-        File.Move(tempFileName, oldFileName);
+        var newItemOldInfo = GetFileInfo(newItemOldName);
+        var oldFileOldInfo = GetFileInfo(oldItemOldName);
+        var tempFileInfo = new FileInfo(tempFileName);
+        tempFileInfo.Delete();
+        newItemOldInfo.MoveTo(tempFileName);
+        oldFileOldInfo.MoveTo(GetFileInfo(oldItemNewName).FullName);
+        tempFileInfo.MoveTo(GetFileInfo(newItemNewName).FullName);
     }
 
-    private IEnumerable<FileInfo> GetNewsFiles()
+    private IEnumerable<NewsItemFileName> GetNewsFileNames()
     {
         return from file in _newsDirectory.GetFiles("*." + NewsItemExtension)
-               where NewsItemNameExpression.IsMatch(GetIdFromFileName(file.Name))
-               orderby file.Name descending
-               select file;
+               let fileName = NewsItemFileName.TryParse(file.Name)
+               where null != fileName
+               orderby fileName.FileName descending
+               select fileName;
     }
 
-    private static NewsItem GetItemByFileName(string fileName)
+    private NewsItem GetItemByFileName(NewsItemFileName fileName)
     {
-        var lines = File.ReadAllLines(fileName);
+        var fullFileName = GetFullFileName(fileName);
+        var lines = File.ReadAllLines(fullFileName);
         return new NewsItem
             {
-                Source = GetIdFromFileName(fileName),
+                Id = fileName.Id,
                 Title = lines[0],
                 ReleaseDate = DateTime.ParseExact(lines[1], ReleaseDateFormat, CultureInfo.InvariantCulture),
                 Content = lines.Skip(2).Aggregate((x, y) => x + y)
             };
     }
 
-    private string GetNextItemId()
+    private int GetNextItemIndex()
     {
-        var lastItem = GetNewsFiles().FirstOrDefault();
+        var lastItem = GetNewsFileNames().FirstOrDefault();
         var lastItemIndex = 0;
         if(null != lastItem)
         {
-            lastItemIndex = GetItemIndexFromId(GetIdFromFileName(lastItem.Name));
+            lastItemIndex = lastItem.Index;
         }
         var nextItemIndex = lastItemIndex + 1;
-        return GetItemIdFromIndex(nextItemIndex);
-    }
-
-    private static string GetItemIdFromIndex(int index)
-    {
-        return NewsItemNamePattern.Replace(NewsItemIndexPattern, index.ToString(NewsItemIndexFormat));
-    }
-
-    private static int GetItemIndexFromId(string id)
-    {
-        return int.Parse(NewsItemNameExpression.Match(id).Groups[1].Value);
-    }
-
-    private static string GetIdFromFileName(string fileName)
-    {
-        return Path.GetFileNameWithoutExtension(fileName);
+        return nextItemIndex;
     }
 
     public void CopyTo(NewsRepository targetRepository)
@@ -143,9 +151,9 @@ public class NewsRepository
         File.Delete(tempDirectoryPath);
         var tempDirectory = new DirectoryInfo(tempDirectoryPath);
         tempDirectory.Create();
-        foreach (var file in GetNewsFiles())
+        foreach (var file in GetNewsFileNames())
         {
-            file.CopyTo(Path.Combine(tempDirectoryPath, file.Name));
+            GetFileInfo(file).CopyTo(Path.Combine(tempDirectoryPath, file.FileName));
         }
         targetNewsDirectory.Delete(true);
         tempDirectory.MoveTo(targetNewsDirectory.FullName);
