@@ -14,6 +14,8 @@ public class NewsRepository
     public NewsRepository(string newsVirtualPath)
     {
         _newsDirectory = new DirectoryInfo(GetPhysicalFromVirtualPath(newsVirtualPath));
+		if(!_newsDirectory.Exists)
+			_newsDirectory.Create();
     }
 
     private static string GetPhysicalFromVirtualPath(string newsVirtualPath)
