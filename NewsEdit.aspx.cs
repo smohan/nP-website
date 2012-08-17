@@ -29,4 +29,9 @@ public partial class NewsEdit : System.Web.UI.Page
         LoadArticles();
     }
 
+	protected void cmdReset_Click(object sender, EventArgs e)
+	{
+		AppState.CurrentNews.CopyTo(AppState.PendingNews);
+		LoadArticles();
+	}
 }

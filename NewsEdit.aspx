@@ -47,4 +47,5 @@
             </table>
         </FooterTemplate>
     </asp:Repeater>
+    <asp:Button runat="server" OnClick="cmdReset_Click" Text="Reset" />
 </asp:Content>
